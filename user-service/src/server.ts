@@ -4,7 +4,6 @@ import mongodb from '@fastify/mongodb';
 import { envToLogger } from './config/logger';
 import { DatabaseHelper } from './config/database';
 import { UserControllerFactory } from './factories/user-controller.factory';
-import { UserController } from './controllers/user.controller';
 import { userRoutes } from './routes/user.routes';
 
 const environment = (process.env.NODE_ENV ||
@@ -19,31 +18,23 @@ fastify.register(mongodb, {
   forceClose: true,
 });
 
-let userController: UserController;
+fastify.register(async (instance) => {
+  await instance.after();
 
-fastify.addHook('onReady', async () => {
-  try {
-    if (!fastify.mongo?.db) {
-      throw new Error('MongoDB connection failed - db is undefined');
-    }
-
-    await DatabaseHelper.verifyConnection(fastify.mongo.db as any, fastify.log);
-
-    userController = UserControllerFactory.create(fastify.mongo.db as any);
-
-    await fastify.register(userRoutes, {
-      prefix: '/users',
-      userController,
-    });
-
-    fastify.log.info('MongoDB initialized and ready');
-  } catch (error) {
-    fastify.log.error(
-      { error, stack: error instanceof Error ? error.stack : undefined },
-      'Failed to initialize MongoDB connection',
-    );
-    throw error;
+  if (!instance.mongo?.db) {
+    throw new Error('MongoDB connection failed - db is undefined');
   }
+
+  await DatabaseHelper.verifyConnection(instance.mongo.db as any, instance.log);
+
+  const userController = UserControllerFactory.create(instance.mongo.db as any);
+
+  await instance.register(userRoutes, {
+    prefix: '/users',
+    userController,
+  });
+
+  instance.log.info('MongoDB initialized and ready');
 });
 
 fastify.listen(

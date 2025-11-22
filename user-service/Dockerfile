@@ -29,8 +29,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/package*.json ./
 
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
+  adduser -S nodejs -u 1001 && \
+  chown -R nodejs:nodejs /app
 
 USER nodejs
 

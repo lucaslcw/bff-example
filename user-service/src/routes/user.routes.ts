@@ -9,7 +9,7 @@ export async function userRoutes(
   const { userController } = options;
 
   fastify.post<{ Body: CreateUserInputZod }>(
-    '/',
+    '/create',
     async function (request, reply) {
       return userController.createUser(request, reply);
     },

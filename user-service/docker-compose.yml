@@ -14,6 +14,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
       - ./tsconfig.json:/app/tsconfig.json
       - /app/node_modules
     depends_on:
@@ -22,6 +23,15 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./package-lock.json
 
   mongo:
     image: mongo:7.0
