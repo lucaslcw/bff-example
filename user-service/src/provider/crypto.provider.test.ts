@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { CryptoProvider } from './crypto';
+import { CryptoProvider } from './crypto.provider';
 import bcrypt from 'bcrypt';
 
 vi.mock('bcrypt', () => ({
