@@ -41,12 +41,11 @@ export class UserService {
     if (!passwordMatch) {
       throw new BadRequestError('Invalid email or password.');
     }
-
     const token = this.jwtProvider.sign({
       userId: user._id?.toString() || '',
       email: user.email,
     });
-
+    delete user.password;
     return { user, token };
   }
 }

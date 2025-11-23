@@ -12,6 +12,7 @@ describe('userRoutes', () => {
     fastify = Fastify();
     mockUserController = {
       createUser: vi.fn(),
+      authenticateUser: vi.fn(),
     };
   });
 
@@ -104,6 +105,121 @@ describe('userRoutes', () => {
       });
 
       expect(mockUserController.createUser).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('POST /authenticate', () => {
+    it('should register POST /authenticate route', async () => {
+      await userRoutes(fastify, {
+        userController: mockUserController as UserController,
+      });
+
+      const routes = fastify.printRoutes({ commonPrefix: false });
+      expect(routes).toContain('/authenticate');
+      expect(routes).toContain('POST');
+    });
+
+    it('should call userController.authenticateUser when POST /authenticate is called', async () => {
+      const mockReply = {
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
+
+      (
+        mockUserController.authenticateUser as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(mockReply);
+
+      await userRoutes(fastify, {
+        userController: mockUserController as UserController,
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/authenticate',
+        payload: {
+          email: 'test@example.com',
+          password: 'password123',
+        },
+      });
+
+      expect(mockUserController.authenticateUser).toHaveBeenCalled();
+      expect(mockUserController.authenticateUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('should pass request and reply to controller', async () => {
+      await userRoutes(fastify, {
+        userController: mockUserController as UserController,
+      });
+
+      await fastify.inject({
+        method: 'POST',
+        url: '/authenticate',
+        payload: {
+          email: 'test@example.com',
+          password: 'password123',
+        },
+      });
+
+      const authenticateUserCall = (
+        mockUserController.authenticateUser as ReturnType<typeof vi.fn>
+      ).mock.calls[0];
+
+      expect(authenticateUserCall).toBeDefined();
+      expect(authenticateUserCall[0]).toHaveProperty('body');
+      expect(authenticateUserCall[1]).toHaveProperty('status');
+    });
+
+    it('should handle different authentication payloads', async () => {
+      await userRoutes(fastify, {
+        userController: mockUserController as UserController,
+      });
+
+      const payload1 = {
+        email: 'user1@example.com',
+        password: 'password1',
+      };
+
+      const payload2 = {
+        email: 'user2@example.com',
+        password: 'password2',
+      };
+
+      await fastify.inject({
+        method: 'POST',
+        url: '/authenticate',
+        payload: payload1,
+      });
+
+      await fastify.inject({
+        method: 'POST',
+        url: '/authenticate',
+        payload: payload2,
+      });
+
+      expect(mockUserController.authenticateUser).toHaveBeenCalledTimes(2);
+    });
+
+    it('should pass correct email and password from request body', async () => {
+      await userRoutes(fastify, {
+        userController: mockUserController as UserController,
+      });
+
+      const payload = {
+        email: 'auth@example.com',
+        password: 'securePass123',
+      };
+
+      await fastify.inject({
+        method: 'POST',
+        url: '/authenticate',
+        payload,
+      });
+
+      const authenticateUserCall = (
+        mockUserController.authenticateUser as ReturnType<typeof vi.fn>
+      ).mock.calls[0];
+
+      expect(authenticateUserCall[0].body).toEqual(payload);
     });
   });
 

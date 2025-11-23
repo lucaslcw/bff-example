@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserController } from './user.controller';
 import { UserService } from '../services/user.service';
-import { ConflictError } from '../errors/app-error';
+import {
+  ConflictError,
+  NotFoundError,
+  BadRequestError,
+} from '../errors/app-error';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { CreateUserInputZod } from '../dto/user.dto';
+import { CreateUserInputZod, AuthenticateUserInputZod } from '../dto/user.dto';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -21,6 +25,7 @@ describe('UserController', () => {
 
     mockUserService = {
       createUser: vi.fn(),
+      authenticateUser: vi.fn(),
     };
 
     mockRequest = {
@@ -203,6 +208,183 @@ describe('UserController', () => {
 
         const result = await controller.createUser(
           mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(result).toBeDefined();
+      });
+    });
+  });
+
+  describe('authenticateUser', () => {
+    describe('success cases', () => {
+      it('should authenticate user successfully and return 200', async () => {
+        const authResult = {
+          user: {
+            _id: '123',
+            email: 'test@example.com',
+          },
+          token: 'jwt-token-123',
+        };
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(authResult);
+
+        await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(mockUserService.authenticateUser).toHaveBeenCalledWith(
+          'test@example.com',
+          'password123',
+        );
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(sendMock).toHaveBeenCalledWith(authResult);
+      });
+
+      it('should call userService.authenticateUser with correct credentials', async () => {
+        const authResult = {
+          user: { _id: '123', email: 'test@example.com' },
+          token: 'jwt-token-123',
+        };
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(authResult);
+
+        await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(mockUserService.authenticateUser).toHaveBeenCalledTimes(1);
+        expect(mockUserService.authenticateUser).toHaveBeenCalledWith(
+          'test@example.com',
+          'password123',
+        );
+      });
+    });
+
+    describe('not found errors', () => {
+      it('should handle NotFoundError and return 404', async () => {
+        const notFoundError = new NotFoundError('User not found.');
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockRejectedValue(notFoundError);
+
+        await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(sendMock).toHaveBeenCalledWith({
+          error: 'User not found.',
+          code: 'NOT_FOUND_ERROR',
+        });
+      });
+    });
+
+    describe('bad request errors', () => {
+      it('should handle BadRequestError for invalid password and return 400', async () => {
+        const badRequestError = new BadRequestError(
+          'Invalid email or password.',
+        );
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockRejectedValue(badRequestError);
+
+        await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(sendMock).toHaveBeenCalledWith({
+          error: 'Invalid email or password.',
+          code: 'BAD_REQUEST_ERROR',
+        });
+      });
+    });
+
+    describe('unexpected errors', () => {
+      it('should handle generic Error and return 500', async () => {
+        const genericError = new Error('Database connection failed');
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockRejectedValue(genericError);
+
+        await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(logErrorMock).toHaveBeenCalledWith(
+          genericError,
+          'Unexpected error',
+        );
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(sendMock).toHaveBeenCalledWith({
+          error: 'Internal server error',
+        });
+      });
+
+      it('should handle string error', async () => {
+        const stringError = 'Something went wrong';
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockRejectedValue(stringError);
+
+        await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(logErrorMock).toHaveBeenCalledWith(
+          stringError,
+          'Unexpected error',
+        );
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(sendMock).toHaveBeenCalledWith({
+          error: 'Internal server error',
+        });
+      });
+    });
+
+    describe('return values', () => {
+      it('should return the reply object', async () => {
+        const authResult = {
+          user: { _id: '123', email: 'test@example.com' },
+          token: 'jwt-token-123',
+        };
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(authResult);
+
+        const result = await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
+          mockReply as FastifyReply,
+        );
+
+        expect(result).toBeDefined();
+      });
+
+      it('should return reply object even on error', async () => {
+        const error = new Error('Test error');
+
+        (
+          mockUserService.authenticateUser as ReturnType<typeof vi.fn>
+        ).mockRejectedValue(error);
+
+        const result = await controller.authenticateUser(
+          mockRequest as FastifyRequest<{ Body: AuthenticateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
