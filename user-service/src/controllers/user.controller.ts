@@ -13,11 +13,8 @@ export class UserController {
   ) {
     try {
       const user = User.create(request.body);
-      const result = await this.userService.createUser(user);
-      return reply.status(201).send({
-        id: result.insertedId?.toString(),
-        email: user.email,
-      });
+      await this.userService.createUser(user);
+      return reply.status(201).send();
     } catch (error) {
       return ErrorHandler.handle(error, request, reply);
     }

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserService } from './user.service';
 import { UserRepository } from '../repositories/user.repository';
-import { CryptoProvider } from '../provider/crypto';
+import { CryptoProvider } from '../provider/crypto.provider';
+import { JwtProvider } from '../provider/jwt.provider';
 import { User } from '../domain/user.domain';
 import {
   ConflictError,
@@ -19,6 +20,10 @@ describe('UserService', () => {
     hashPassword: ReturnType<typeof vi.fn>;
     comparePassword: ReturnType<typeof vi.fn>;
   };
+  let mockJwtProvider: {
+    sign: ReturnType<typeof vi.fn>;
+    verify: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     mockUserRepository = {
@@ -31,9 +36,15 @@ describe('UserService', () => {
       comparePassword: vi.fn(),
     };
 
+    mockJwtProvider = {
+      sign: vi.fn(),
+      verify: vi.fn(),
+    };
+
     userService = new UserService(
       mockUserRepository as unknown as UserRepository,
       mockCryptoProvider as unknown as CryptoProvider,
+      mockJwtProvider as unknown as JwtProvider,
     );
   });
 
@@ -51,7 +62,7 @@ describe('UserService', () => {
         insertedId: { toString: () => '123' },
       });
 
-      const result = await userService.createUser(user);
+      await userService.createUser(user);
 
       expect(mockUserRepository.findOneByEmail).toHaveBeenCalledWith(
         user.email,
@@ -63,7 +74,6 @@ describe('UserService', () => {
         email: user.email,
         password: hashedPassword,
       });
-      expect(result.insertedId).toBeDefined();
     });
 
     it('should throw ConflictError when user already exists', async () => {
@@ -77,9 +87,7 @@ describe('UserService', () => {
         _id: '123',
       });
 
-      await expect(userService.createUser(user)).rejects.toThrow(
-        ConflictError,
-      );
+      await expect(userService.createUser(user)).rejects.toThrow(ConflictError);
       await expect(userService.createUser(user)).rejects.toThrow(
         'There is already a user with this email.',
       );
@@ -94,15 +102,17 @@ describe('UserService', () => {
       const email = 'test@example.com';
       const password = 'password123';
       const hashedPassword = 'hashedPassword123';
+      const mockToken = 'mock.jwt.token';
 
       const mockUser = {
-        _id: '123',
+        _id: { toString: () => '123' },
         email,
         password: hashedPassword,
       };
 
       mockUserRepository.findOneByEmail.mockResolvedValue(mockUser);
       mockCryptoProvider.comparePassword.mockResolvedValue(true);
+      mockJwtProvider.sign.mockReturnValue(mockToken);
 
       const result = await userService.authenticateUser(email, password);
 
@@ -111,7 +121,11 @@ describe('UserService', () => {
         password,
         hashedPassword,
       );
-      expect(result).toEqual(mockUser);
+      expect(mockJwtProvider.sign).toHaveBeenCalledWith({
+        userId: '123',
+        email,
+      });
+      expect(result).toEqual({ user: mockUser, token: mockToken });
     });
 
     it('should throw NotFoundError when user does not exist', async () => {

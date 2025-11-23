@@ -6,8 +6,15 @@ import type { Db } from 'mongodb';
 describe('UserControllerFactory', () => {
   let mockDb: Partial<Db>;
   let mockCollection: any;
+  const originalEnv = process.env;
 
   beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      JWT_SECRET: 'test-secret-key',
+      JWT_EXPIRES_IN: '1h',
+    };
+
     mockCollection = {
       findOne: vi.fn(),
       insertOne: vi.fn(),

@@ -3,12 +3,12 @@ import { UserController } from './user.controller';
 import { UserService } from '../services/user.service';
 import { ConflictError } from '../errors/app-error';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { CreateUserInput } from '../schema/user';
+import { CreateUserInputZod } from '../dto/user.dto';
 
 describe('UserController', () => {
   let controller: UserController;
   let mockUserService: Partial<UserService>;
-  let mockRequest: Partial<FastifyRequest<{ Body: CreateUserInput }>>;
+  let mockRequest: Partial<FastifyRequest<{ Body: CreateUserInputZod }>>;
   let mockReply: Partial<FastifyReply>;
   let statusMock: ReturnType<typeof vi.fn>;
   let sendMock: ReturnType<typeof vi.fn>;
@@ -42,46 +42,37 @@ describe('UserController', () => {
 
   describe('createUser', () => {
     describe('success cases', () => {
-      it('should create a user successfully and return 201 with user data', async () => {
-        const insertResult = {
-          insertedId: '507f1f77bcf86cd799439011' as any,
-        };
-
+      it('should create a user successfully and return 201', async () => {
         (
           mockUserService.createUser as ReturnType<typeof vi.fn>
-        ).mockResolvedValue(insertResult);
+        ).mockResolvedValue(undefined);
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
         expect(mockUserService.createUser).toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(201);
-        expect(sendMock).toHaveBeenCalledWith({
-          id: '507f1f77bcf86cd799439011',
-          email: 'test@example.com',
-        });
+        expect(sendMock).toHaveBeenCalledWith();
       });
 
-      it('should handle insertedId being undefined', async () => {
-        const insertResult = {
-          insertedId: undefined,
-        };
-
+      it('should call userService.createUser with correct user data', async () => {
         (
           mockUserService.createUser as ReturnType<typeof vi.fn>
-        ).mockResolvedValue(insertResult);
+        ).mockResolvedValue(undefined);
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
-        expect(sendMock).toHaveBeenCalledWith({
-          id: undefined,
-          email: 'test@example.com',
-        });
+        const createUserCall = (
+          mockUserService.createUser as ReturnType<typeof vi.fn>
+        ).mock.calls[0][0];
+
+        expect(createUserCall.email).toBe('test@example.com');
+        expect(createUserCall.password).toBe('password123');
       });
     });
 
@@ -93,7 +84,7 @@ describe('UserController', () => {
         };
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
@@ -111,7 +102,7 @@ describe('UserController', () => {
         };
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
@@ -131,7 +122,7 @@ describe('UserController', () => {
         ).mockRejectedValue(conflictError);
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
@@ -152,7 +143,7 @@ describe('UserController', () => {
         ).mockRejectedValue(genericError);
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
@@ -174,7 +165,7 @@ describe('UserController', () => {
         ).mockRejectedValue(stringError);
 
         await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
@@ -193,10 +184,10 @@ describe('UserController', () => {
       it('should return the reply object', async () => {
         (
           mockUserService.createUser as ReturnType<typeof vi.fn>
-        ).mockResolvedValue({ insertedId: '123' as any });
+        ).mockResolvedValue(undefined);
 
         const result = await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 
@@ -211,7 +202,7 @@ describe('UserController', () => {
         ).mockRejectedValue(error);
 
         const result = await controller.createUser(
-          mockRequest as FastifyRequest<{ Body: CreateUserInput }>,
+          mockRequest as FastifyRequest<{ Body: CreateUserInputZod }>,
           mockReply as FastifyReply,
         );
 

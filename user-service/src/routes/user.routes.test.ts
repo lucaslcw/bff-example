@@ -42,7 +42,7 @@ describe('userRoutes', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/',
+        url: '/create',
         payload: {
           email: 'test@example.com',
           password: 'password123',
@@ -60,7 +60,7 @@ describe('userRoutes', () => {
 
       await fastify.inject({
         method: 'POST',
-        url: '/',
+        url: '/create',
         payload: {
           email: 'test@example.com',
           password: 'password123',
@@ -93,13 +93,13 @@ describe('userRoutes', () => {
 
       await fastify.inject({
         method: 'POST',
-        url: '/',
+        url: '/create',
         payload: payload1,
       });
 
       await fastify.inject({
         method: 'POST',
-        url: '/',
+        url: '/create',
         payload: payload2,
       });
 
