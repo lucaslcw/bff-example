@@ -6,7 +6,7 @@
   "scripts": {
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "dev": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "npm run clean && tsc",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
